@@ -5,6 +5,7 @@ class ConversationEngine:
         self.sessions = {}
         self.pending_scenario = None
 
+    # Create a dictionary key/value using call_sid as the key and details about the call session as the value
     def start_session(self, call_sid, scenario):
         self.sessions[call_sid] = {
             "scenario": scenario,
@@ -14,6 +15,7 @@ class ConversationEngine:
         }
         return {"action": "listen"}
 
+    # Store agent speech in session transcript, increment the turn, and get our next utterance ready
     def handle_response(self, call_sid, agent_speech="", confidence=""):
         session = self.sessions.get(call_sid)
 
@@ -29,47 +31,53 @@ class ConversationEngine:
                 "turn": session["current_turn"],
             })
 
-        turns = session["scenario"]["turns"]
-        current = session["current_turn"]
+        total_turns = session["scenario"]["turns"]
+        current_turn = session["current_turn"]
 
         # Check if we're done
-        if current >= len(turns) or current >= MAX_TURNS:
+        if current_turn >= len(total_turns) or current_turn >= MAX_TURNS:
             session["complete"] = True
             return {"action": "hangup"}
 
         # Get next utterance and apply templates
-        utterance = turns[current]["send"]
-        utterance = self._apply_templates(utterance, session["transcript"])
+        utterance = total_turns[current_turn]["send"]
+        utterance = self.apply_templates(utterance, session["transcript"])
 
         # Log our utterance
         session["transcript"].append({
             "role": "user",
             "content": utterance,
-            "turn": current,
+            "turn": current_turn,
         })
         session["current_turn"] += 1
 
         return {"action": "send", "utterance": utterance}
 
+    # Return transcripts for a call session using a given call_sid
     def get_transcript(self, call_sid):
         session = self.sessions.get(call_sid)
         if not session:
             return []
         return session["transcript"]
 
+    # Return details on a call session using a given call_sid
     def get_session(self, call_sid):
         return self.sessions.get(call_sid)
 
+    # Mark a call session as complete given a call_sid
     def is_complete(self, call_sid):
         session = self.sessions.get(call_sid)
         if not session:
             return True
         return session["complete"]
 
+    # Remove call session using a given call_sid
     def remove_session(self, call_sid):
         return self.sessions.pop(call_sid, None)
 
-    def _apply_templates(self, message, transcript):
+    # Sets the last response in a variable that can be used if
+    # the {{last_response}} tag exists in the scenario YAML
+    def apply_templates(self, message, transcript):
         # {{last_response}} - most recent agent response
         last_response = ""
         for entry in reversed(transcript):

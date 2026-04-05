@@ -25,16 +25,46 @@ Scenarios are mapped to the OWASP Top 10 for LLM Applications:
 ## Prerequisites
 
 - Python 3.10+
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
 - A Twilio account with a phone number
-- ngrok (for local development)
+- [ngrok](https://ngrok.com/) (for local development)
 - An Anthropic API key (optional, for LLM judge analysis)
 
 ## Installation
 
+### Install uv
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Install ngrok
+
+```bash
+# macOS
+brew install ngrok
+
+# Linux / WSL
+curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+  | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
+  && echo "deb https://ngrok-agent.s3.amazonaws.com bookworm main" \
+  | sudo tee /etc/apt/sources.list.d/ngrok.list \
+  && sudo apt update \
+  && sudo apt install ngrok
+```
+
+Then add your ngrok auth token (from https://dashboard.ngrok.com/get-started/your-authtoken):
+
+```bash
+ngrok config add-authtoken YOUR_TOKEN_HERE
+```
+
+### Clone and set up Yapper
+
 ```bash
 git clone https://github.com/youruser/yapper.git
 cd yapper
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Configuration
@@ -49,37 +79,43 @@ WEBHOOK_BASE_URL=https://your-ngrok-url.ngrok-free.app
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
 ```
 
-Start ngrok before running:
+### Setting up ngrok
+
+Before running Yapper, start ngrok in a separate terminal:
 
 ```bash
 ngrok http 5000
 ```
 
-Copy the ngrok URL into your `.env` as `WEBHOOK_BASE_URL`.
+ngrok will display a forwarding URL like `https://a1b2c3d4.ngrok-free.app`. Copy this URL into your `.env` file as `WEBHOOK_BASE_URL`.
+
+ngrok must stay running for the duration of the scan. On the free tier, the URL changes every time you restart ngrok, so you'll need to update your `.env` accordingly.
+
+ngrok also provides a web inspector at `http://localhost:4040` where you can see every request Twilio makes to your webhook in real time — useful for debugging.
 
 ## Usage
 
 ```bash
 # List all available scenarios
-python yapper.py --list-scenarios
+uv run python yapper.py --list-scenarios
 
 # Run all scenarios against a target
-python yapper.py --target +15559876543 --all
+uv run python yapper.py --target +15559876543 --all
 
 # Run a specific scenario
-python yapper.py --target +15559876543 --scenario prompt_injection_canary
+uv run python yapper.py --target +15559876543 --scenario prompt_injection_canary
 
 # Run all scenarios in a category
-python yapper.py --target +15559876543 --category LLM01_prompt_injection
+uv run python yapper.py --target +15559876543 --category LLM01_prompt_injection
 
 # Run without the LLM judge (pattern matching only)
-python yapper.py --target +15559876543 --all --no-judge
+uv run python yapper.py --target +15559876543 --all --no-judge
 
 # Verbose output with full transcripts
-python yapper.py --target +15559876543 --all --verbose
+uv run python yapper.py --target +15559876543 --all --verbose
 
 # Save JSON report
-python yapper.py --target +15559876543 --all --output report.json
+uv run python yapper.py --target +15559876543 --all --output report.json
 ```
 
 ## Architecture

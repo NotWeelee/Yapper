@@ -1,6 +1,0 @@
-flask
-twilio
-pyyaml
-httpx
-anthropic
-python-dotenv

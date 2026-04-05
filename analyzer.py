@@ -15,6 +15,7 @@ class Analyzer:
                 print("Warning: no ANTHROPIC_API_KEY set, skipping LLM judge")
                 self.use_judge = False
 
+    # Check if the AI agent said something they shouldn't have
     def analyze(self, scenario, transcript):
         detect = scenario["detect"]
         agent_responses = [
@@ -25,15 +26,19 @@ class Analyzer:
         findings = []
 
         # Tier 1: keyword detection
+        # If specific keywords specified in the scenario YAML as an 'agent fail' is found,
+        # add the agent response that contains the keyword to the findings list 
         for keyword in detect.get("keywords", []):
             if keyword.lower() in full_text.lower():
                 findings.append({
                     "type": "keyword",
                     "value": keyword,
-                    "context": self._extract_context(full_text, keyword),
+                    "context": self.extract_context(full_text, keyword),
                 })
 
         # Tier 2: regex pattern detection
+        # If specific patterns specified in the scenario YAML as an 'agent fail' is found,
+        # add the agent response that contains the keyword to the findings list
         for pattern in detect.get("patterns", []):
             try:
                 match = re.search(pattern, full_text, re.IGNORECASE)
@@ -47,9 +52,11 @@ class Analyzer:
                 print(f"Warning: invalid regex pattern: {pattern}")
 
         # Tier 3: LLM judge
+        # If LLM judge prompt is specified in scenario YAML as an 'agent fail',
+        # send the prompt with the transcript to the LLM to check if there is a potential fail
         judge_result = None
         if self.use_judge and detect.get("llm_judge"):
-            judge_result = self._run_judge(detect["llm_judge"], transcript)
+            judge_result = self.run_judge(detect["llm_judge"], transcript)
             if judge_result and judge_result.get("finding"):
                 findings.append({
                     "type": "llm_judge",
@@ -69,7 +76,8 @@ class Analyzer:
             "transcript": transcript,
         }
 
-    def _run_judge(self, judge_config, transcript):
+    # Send the entire transcript with the LLM judge prompt specified in your scenario YAML
+    def run_judge(self, judge_config, transcript):
         prompt = judge_config["prompt"]
         threshold = judge_config.get("finding_threshold", 7)
 
@@ -118,7 +126,8 @@ class Analyzer:
             print(f"Warning: LLM judge failed: {e}")
             return {"finding": False, "reasoning": str(e)}
 
-    def _extract_context(self, text, needle, window=80):
+    # Creates a snippet surrounding a 'keyword' specific in the scenario YAML if the keyword is found
+    def extract_context(self, text, needle, window=80):
         idx = text.lower().find(needle.lower())
         if idx == -1:
             return ""

@@ -1,0 +1,13 @@
+[project]
+name = "yapper"
+version = "0.1.0"
+description = "Security testing tool for voice-based AI agents"
+requires-python = ">=3.10"
+dependencies = [
+    "flask",
+    "twilio",
+    "pyyaml",
+    "httpx",
+    "anthropic",
+    "python-dotenv",
+]
