@@ -1,7 +1,4 @@
-/.env
-__pycache__/analyzer.cpython-313.pyc
-__pycache__/caller.cpython-313.pyc
-__pycache__/engine.cpython-313.pyc
-__pycache__/config.cpython-313.pyc
-__pycache__/scenario_loader.cpython-313.pyc
-__pycache__/reporter.cpython-313.pyc
+.env
+.venv
+__pycache__/
+*.pyc
