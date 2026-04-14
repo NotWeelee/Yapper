@@ -68,7 +68,7 @@ class ConversationEngine:
     def is_complete(self, call_sid):
         session = self.sessions.get(call_sid)
         if not session:
-            return True
+            return False
         return session["complete"]
 
     # Remove call session using a given call_sid

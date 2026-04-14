@@ -28,6 +28,7 @@ class ScenarioLoader:
                 print(f"Warning: skipping {filepath}: {e}")
 
         return scenarios
+    
 
     # Read each YAML file and confirm that they are formatted correctly
     # If the detect block doesn't exist, fill them with empty/null values
