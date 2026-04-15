@@ -102,7 +102,7 @@ ngrok will display a forwarding URL like `https://a1b2c3d4.ngrok-free.app`. Copy
 
 ngrok must stay running for the duration of the scan. On the free tier, the URL changes every time you restart ngrok, so you'll need to update your `.env` accordingly.
 
-ngrok also provides a web inspector at `http://localhost:4040` where you can see every request Twilio makes to your webhook in real time — useful for debugging.
+ngrok also provides a web inspector at `http://localhost:4040` where you can see every request Twilio makes to your webhook in real time (useful for debugging).
 
 ## Usage
 
@@ -163,13 +163,6 @@ detect:
 
 - `{{last_response}}` — the agent's most recent response
 - `{{turn_count}}` — number of turns sent so far
-
-## Limitations
-
-- Telephony only — operates over phone calls via Twilio
-- STT dependent — analysis quality depends on Twilio's speech recognition accuracy
-- Sequential — runs one scenario per call, one call at a time
-- No audio-level attacks — operates at the transcript level, not the audio waveform level
 
 ## Future Work
  
