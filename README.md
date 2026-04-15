@@ -62,7 +62,7 @@ ngrok config add-authtoken YOUR_TOKEN_HERE
 ### Clone and set up Yapper
 
 ```bash
-git clone https://github.com/youruser/yapper.git
+git clone https://github.com/yourusername/yapper.git
 cd yapper
 uv sync
 ```
@@ -72,11 +72,21 @@ uv sync
 Create a `.env` file in the project root:
 
 ```
+# Required
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_PHONE_NUMBER=+15551234567
 WEBHOOK_BASE_URL=https://your-ngrok-url.ngrok-free.app
+
+# Required for LLM judge (optional if using --no-judge)
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
+
+# Optional (defaults shown)
+WEBHOOK_PORT=5000
+SPEECH_TIMEOUT=4
+SPEECH_LANGUAGE=en-US
+MAX_TURNS=20
+JUDGE_MODEL=claude-sonnet-4-20250514
 ```
 
 ### Setting up ngrok
@@ -116,20 +126,6 @@ uv run python yapper.py --target +15559876543 --all --verbose
 
 # Save JSON report
 uv run python yapper.py --target +15559876543 --all --output report.json
-```
-
-## Architecture
-
-```
-yapper.py            CLI entry point
-config.py            Settings and credentials from environment
-scenario_loader.py   Loads and validates YAML scenario files
-engine.py            Conversation state machine and turn management
-webhook.py           Flask server handling Twilio callbacks
-caller.py            Initiates outbound calls via Twilio
-analyzer.py          Post-call analysis (pattern matching + LLM judge)
-reporter.py          Terminal summary and JSON report output
-scenarios/           YAML attack scenario definitions
 ```
 
 ## Writing Custom Scenarios
@@ -174,9 +170,12 @@ detect:
 - Sequential — runs one scenario per call, one call at a time
 - No audio-level attacks — operates at the transcript level, not the audio waveform level
 
-## Responsible Use
-
-This tool is intended for authorized security testing and research only. Always obtain explicit written permission before testing any system you do not own. Unauthorized use of this tool may violate applicable laws.
+## Future Work
+ 
+- Audio-level attacks (adversarial waveforms, STT manipulation)
+- Branching scenario logic (adaptive multi-turn attacks based on agent responses)
+- OpenAI TTS for more natural-sounding attack utterances
+- Concurrent calls for faster scanning
 
 ## License
 
