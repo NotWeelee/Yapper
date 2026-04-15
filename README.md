@@ -1,4 +1,5 @@
 # Yapper
+**v0.1.0**
 
 A security testing tool for voice-based AI agents, mapped to the OWASP Top 10 for LLM Applications (2025).
 
