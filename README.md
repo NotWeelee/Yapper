@@ -3,7 +3,7 @@
 
 A security testing tool for voice-based AI agents, with sample scenarios mapped to the OWASP Top 10 for LLM Applications (2025).
 
-AI voice agents are replacing human operators across industries - answering phones, handling intake, and routing requests. While prompt injection testing tools exist for text-based chatbots, voice AI agents have received less security scrutiny. Yapper closes that gap by placing real phone calls to voice AI agents, running scripted attack scenarios, and analyzing the responses for signs of successful exploitation.
+AI voice agents are replacing human operators across industries - answering phones, handling intake, and routing requests. While prompt injection testing tools exist for text-based chatbots, voice AI agents have received less security scrutiny. Yapper closes that gap by placing real phone calls to voice AI agents, running attack scenarios, and analyzing the responses for signs of successful exploitation.
 
 ## How It Works
 
