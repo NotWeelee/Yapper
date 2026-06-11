@@ -1,6 +1,6 @@
 from flask import Flask, request
 from twilio.twiml.voice_response import VoiceResponse, Gather
-from config import SPEECH_TIMEOUT, SPEECH_LANGUAGE
+from config import SPEECH_TIMEOUT, SPEECH_LANGUAGE, SPEECH_MODEL
 from engine import ConversationEngine
 from scenario_loader import ScenarioLoader
 
@@ -48,12 +48,14 @@ def call_status():
     if transcript:
         print(f"\n--- Transcript for {call_sid} ---")
         for entry in transcript:
-            role = "AGENT" if entry["role"] == "agent" else "USER "
+            role = "AGENT" if entry["role"] == "agent" else "USER"
             print(f"  [{role}] {entry['content']}")
         print()
 
-    # Clean up session
-    engine.remove_session(call_sid)
+    # Mark session as complete
+    session = engine.get_session(call_sid)
+    if session:
+        session["complete"] = True
 
     return "", 204
 
@@ -67,7 +69,8 @@ def build_twiml(result):
             action="/call/turn",
             method="POST",
             speech_timeout=SPEECH_TIMEOUT,
-            language=SPEECH_LANGUAGE,
+            speech_model=SPEECH_MODEL,
+            language=SPEECH_LANGUAGE
         )
         response.append(gather)
         response.redirect("/call/turn")
@@ -78,7 +81,9 @@ def build_twiml(result):
             action="/call/turn",
             method="POST",
             speech_timeout=SPEECH_TIMEOUT,
+            speech_model=SPEECH_MODEL,
             language=SPEECH_LANGUAGE,
+            enhanced="true"
         )
         gather.say(result["utterance"])
         response.append(gather)

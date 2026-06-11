@@ -14,7 +14,8 @@ WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "5000"))
 WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL")  # ngrok URL
 
 # Call settings
-SPEECH_TIMEOUT = int(os.getenv("SPEECH_TIMEOUT", "4"))
+SPEECH_TIMEOUT = os.getenv("SPEECH_TIMEOUT", "3")
+SPEECH_MODEL = os.getenv("SPEECH_MODEL", "deepgram_nova-3")
 SPEECH_LANGUAGE = os.getenv("SPEECH_LANGUAGE", "en-US")
 MAX_TURNS = int(os.getenv("MAX_TURNS", "20"))
 

@@ -7,6 +7,7 @@ import argparse
 import sys
 import threading
 import time
+
 from config import (
     TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN,
@@ -150,6 +151,11 @@ def resolve_scenarios(loader, args):
 
 def start_webhook_server():
     from webhook import app
+
+    # Silence Flask startup banner
+    import flask.cli
+    flask.cli.show_server_banner = lambda *args: None
+    
     app.run(port=WEBHOOK_PORT, debug=False, use_reloader=False)
 
 
@@ -248,7 +254,7 @@ def main():
 
         if args.verbose:
             for entry in transcript:
-                role = "AGENT" if entry["role"] == "agent" else "USER "
+                role = "AGENT" if entry["role"] == "agent" else "USER"
                 print(f"     [{role}] {entry['content']}")
             print()
 
@@ -270,6 +276,7 @@ def main():
         reporter.write_json(args.output)
         print(f"Report written to {args.output}")
 
+    time.sleep(5)
     # Exit code: 1 if any findings, 0 if clean
     return 1 if reporter.findings else 0
 
