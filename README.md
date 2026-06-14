@@ -63,7 +63,7 @@ ngrok config add-authtoken YOUR_TOKEN_HERE
 ### Clone and set up Yapper
 
 ```bash
-git clone https://github.com/yourusername/yapper.git
+git clone https://github.com/NotWeelee/yapper.git
 cd yapper
 uv sync
 ```
