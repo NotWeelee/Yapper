@@ -9,5 +9,6 @@ dependencies = [
     "pyyaml",
     "httpx",
     "anthropic",
+    "openai>=1.0",
     "python-dotenv",
 ]

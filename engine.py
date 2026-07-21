@@ -116,8 +116,15 @@ class ConversationEngine:
             session["complete"] = True
             return {"action": "hangup"}
 
-        # Import here to avoid loading the module when not using adaptive scenarios
-        from strategist import generate_utterance
+        # Import here to avoid loading the module when not using adaptive scenarios.
+        # strategist.py is kept out of the public repo for now.
+        try:
+            from strategist import generate_utterance
+        except ImportError:
+            raise RuntimeError(
+                "This scenario uses adaptive strategy generation, which requires "
+                "strategist.py (not included in this build)."
+            )
 
         utterance = generate_utterance(
             strategy=strategy,
