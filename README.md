@@ -230,10 +230,10 @@ detect:
 
 ## Future Work
  
-- Audio-level attacks (adversarial waveforms, STT manipulation)
+- Adaptive LLM-powered scenarios
 - Branching scenario logic (adaptive multi-turn attacks based on agent responses)
-- OpenAI TTS for more natural-sounding attack utterances
-- Concurrent calls for faster scanning
+- External STT provider usage
+- Concurrent calls for faster yapping
 
 ## License
 
