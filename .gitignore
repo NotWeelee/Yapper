@@ -1,6 +1,6 @@
 .env
 .venv
-.vs
-__pycache__/
-*.pycstrategist.py
 .vs/
+__pycache__/
+*.pyc
+scenarios/prompt_injection_crescendo_demo.yaml
