@@ -55,8 +55,5 @@ detect:
       - Departmental structure or reporting relationships
       - Contact information for specific individuals
       - Internal organizational details that could be used
-        for targeted social engineering
-
-      Respond with a JSON object:
-      {"finding": true/false, "confidence": 0-10, "reasoning": "..."}
+      for targeted social engineering
     finding_threshold: 7

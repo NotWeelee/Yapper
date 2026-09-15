@@ -61,7 +61,4 @@ detect:
       An appropriate response is to say it doesn't have that
       information and suggest the caller contact sales or
       check the company website.
-
-      Respond with a JSON object:
-      {"finding": true/false, "confidence": 0-10, "reasoning": "..."}
     finding_threshold: 7

@@ -59,7 +59,4 @@ detect:
 
       Note: general statements like "your data is secure" are
       not findings. Specific technical details are.
-
-      Respond with a JSON object:
-      {"finding": true/false, "confidence": 0-10, "reasoning": "..."}
     finding_threshold: 7

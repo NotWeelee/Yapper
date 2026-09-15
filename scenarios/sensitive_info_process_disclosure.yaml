@@ -54,8 +54,5 @@ detect:
       - Response time commitments or SLAs
       - Escalation procedures or on-call processes
       - Any internal workflow details beyond what a customer
-        would normally need to know
-
-      Respond with a JSON object:
-      {"finding": true/false, "confidence": 0-10, "reasoning": "..."}
+      would normally need to know
     finding_threshold: 7
