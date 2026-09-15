@@ -290,7 +290,6 @@ spent a phone call discovering it.
 - ~~LLM-powered scenarios~~
 - ~~Branching scenario logic~~
 - SIP support
-- Media Streams in place of Gather
 - External STT provider usage
 - Concurrent calls for faster yapping
 
