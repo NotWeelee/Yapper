@@ -1,12 +1,10 @@
 import re
-import json
-import anthropic
 from config import (
-    ANTHROPIC_API_KEY,
     JUDGE_MODEL,
     JUDGE_PROVIDER,
     JUDGE_BASE_URL,
 )
+from llm import call_model, check_provider, extract_json
 
 # Appended to every judge prompt so yapper owns the output contract centrally,
 # regardless of how each scenario's prompt is worded. This pins the JSON shape,
@@ -36,34 +34,15 @@ class Analyzer:
     def __init__(self, use_judge=True):
         self.use_judge = use_judge
         self.provider = JUDGE_PROVIDER
-        self.client = None
 
         if not use_judge:
             return
 
-        if self.provider == "anthropic":
-            if ANTHROPIC_API_KEY:
-                self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            else:
-                print("Warning: no ANTHROPIC_API_KEY set, skipping LLM judge")
-                self.use_judge = False
-
-        elif self.provider == "local":
-            # Ollama and LM Studio both expose an OpenAI-compatible API,
-            # so we reuse the OpenAI SDK pointed at a local base URL.
-            # Import lazily so Anthropic-only users don't need the package.
-            try:
-                from openai import OpenAI
-            except ImportError:
-                print("Warning: 'openai' package not installed, skipping LLM judge")
-                print("  Install it with: uv add openai")
-                self.use_judge = False
-                return
-            # Local servers don't require a real key, but the SDK insists on one.
-            self.client = OpenAI(base_url=JUDGE_BASE_URL, api_key="local")
-
-        else:
-            print(f"Warning: unknown JUDGE_PROVIDER '{self.provider}', skipping LLM judge")
+        # Degrade once, here, rather than failing on every scenario: a missing
+        # key or package means the scan still runs on pattern matching alone.
+        problem = check_provider(self.provider)
+        if problem:
+            print(f"Warning: {problem}, skipping LLM judge")
             self.use_judge = False
 
     # Check if the AI agent said something they shouldn't have
@@ -165,75 +144,26 @@ class Analyzer:
         return result
 
     # Dispatch a single judge prompt to the configured provider and return raw text.
+    # max_tokens is deliberately small: the judge returns three short fields.
+    # json_mode asks a local server to guarantee valid JSON where it supports it.
     def _call_model(self, full_prompt):
-        if self.provider == "anthropic":
-            message = self.client.messages.create(
-                model=JUDGE_MODEL,
-                max_tokens=1024,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-            )
-            return message.content[0].text
-
-        # local / OpenAI-compatible (Ollama, LM Studio)
-        # extra_body is a passthrough for non-standard fields. A plain instruct
-        # model (llama3.1, mistral, qwen2.5, phi-4) silently ignores "think", so
-        # this is a no-op there -- but if JUDGE_MODEL is ever pointed at a
-        # thinking model (qwen3/qwen3.5, deepseek-r1), it suppresses the reasoning
-        # pass that would otherwise leave message.content empty. Belt and
-        # suspenders: prefer a non-thinking judge model AND keep this flag.
-        # (GPT-OSS is the exception -- it wants a level like "low", not False.)
-        kwargs = dict(
+        return call_model(
+            full_prompt,
             model=JUDGE_MODEL,
+            provider=self.provider,
+            base_url=JUDGE_BASE_URL,
             max_tokens=1024,
-            messages=[{"role": "user", "content": full_prompt}],
-            extra_body={"think": False},
+            json_mode=True,
         )
-        # JSON mode guarantees syntactically valid JSON on servers that support
-        # it (recent Ollama does). Older servers reject the param, so fall back
-        # to a plain call and lean on _parse_judge_response instead.
-        try:
-            response = self.client.chat.completions.create(
-                **kwargs, response_format={"type": "json_object"}
-            )
-        except Exception:
-            response = self.client.chat.completions.create(**kwargs)
-        return response.choices[0].message.content
 
-    # Best-effort extraction of a JSON object from a model response.
-    # Local models are flakier than the Anthropic API at returning clean JSON,
-    # so we try progressively looser strategies before giving up.
+    # Extraction lives in llm.extract_json; this keeps the warning that tells
+    # you which model response could not be read.
     @staticmethod
     def _parse_judge_response(text):
-        if not text:
-            return None
-
-        cleaned = text.strip()
-
-        # 1. Strip markdown code fences if the model wrapped its answer.
-        if "```json" in cleaned:
-            cleaned = cleaned.split("```json", 1)[1].split("```", 1)[0].strip()
-        elif "```" in cleaned:
-            cleaned = cleaned.split("```", 1)[1].split("```", 1)[0].strip()
-
-        # 2. Try a direct parse.
-        try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError:
-            pass
-
-        # 3. Fallback: grab the outermost {...} block and try again. Handles
-        # models that prepend/append prose around the JSON object.
-        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(0))
-            except json.JSONDecodeError:
-                pass
-
-        print(f"Warning: could not parse judge response as JSON: {text[:200]}")
-        return None
+        result = extract_json(text)
+        if result is None:
+            print(f"Warning: could not parse judge response as JSON: {(text or '')[:200]}")
+        return result
 
     # Coerce whatever the model returned into the shape the rest of yapper
     # expects: a dict with numeric 'confidence' and string 'reasoning'.
