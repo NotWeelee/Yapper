@@ -1,5 +1,10 @@
-from config import MAX_TURNS
+from config import MAX_TURNS, MAX_CONTINUATIONS
 import re
+import time
+
+# Twilio punctuates its transcripts, so a response that doesn't land on one of
+# these was almost certainly cut off mid-sentence by the 60 second Gather cap.
+TERMINAL_PUNCTUATION = ".?!"
 
 
 class ConversationEngine:
@@ -9,14 +14,11 @@ class ConversationEngine:
 
     # Create a dictionary key/value using call_sid as the key and details about the call session as the value
     def start_session(self, call_sid, scenario):
-        is_adaptive = "strategy" in scenario
-
-        # Build turn index for branching (scripted scenarios only)
+        # Build turn index for branching
         turn_index = {}
-        if not is_adaptive:
-            for i, turn in enumerate(scenario.get("turns", [])):
-                if "id" in turn:
-                    turn_index[turn["id"]] = i
+        for i, turn in enumerate(scenario.get("turns", [])):
+            if "id" in turn:
+                turn_index[turn["id"]] = i
 
         self.sessions[call_sid] = {
             "scenario": scenario,
@@ -25,7 +27,8 @@ class ConversationEngine:
             "last_sent_turn": None,
             "transcript": [],
             "complete": False,
-            "adaptive": is_adaptive,
+            "continuations": 0,
+            "last_activity": time.time(),
         }
         return {"action": "listen"}
 
@@ -36,14 +39,16 @@ class ConversationEngine:
         if not session:
             return {"action": "hangup"}
 
+        # Any webhook at all means the call is still alive. The gap since the
+        # last one is how long this gather ran, recorded so truncation against
+        # Twilio's 60 second cap can be measured rather than inferred.
+        now = time.time()
+        gather_seconds = round(now - session["last_activity"], 1)
+        session["last_activity"] = now
+
         # Store what the agent just said
         if agent_speech:
-            session["transcript"].append({
-                "role": "agent",
-                "content": agent_speech,
-                "confidence": confidence,
-                "turn": session["current_turn"],
-            })
+            self.record_agent_speech(session, agent_speech, confidence, gather_seconds)
 
         # If we haven't heard the agent speak yet, keep listening
         if not agent_speech and not session["transcript"]:
@@ -53,11 +58,49 @@ class ConversationEngine:
         if not agent_speech and session["transcript"] and session["transcript"][-1]["role"] == "user":
             return {"action": "listen"}
 
-        # Route to the appropriate handler
-        if session["adaptive"]:
-            return self._handle_adaptive(session)
-        else:
-            return self._handle_scripted(session)
+        # If the agent was cut off mid-sentence, open another silent gather and
+        # collect the rest rather than talking over the end of their answer.
+        # Silence ends the chain on its own: an empty result falls through to the
+        # handlers below and the scenario carries on as normal.
+        if agent_speech and self.should_extend(session, agent_speech):
+            session["continuations"] += 1
+            return {"action": "listen"}
+
+        session["continuations"] = 0
+
+        return self._handle_scripted(session)
+
+    # Append agent speech to the transcript. While a turn is being extended the
+    # incoming text is a continuation of the answer already recorded, so it is
+    # merged into that entry instead of becoming a phantom turn of its own.
+    def record_agent_speech(self, session, agent_speech, confidence, gather_seconds=None):
+        transcript = session["transcript"]
+
+        if session["continuations"] and transcript and transcript[-1]["role"] == "agent":
+            previous = transcript[-1]
+            previous["content"] = previous["content"].rstrip() + " " + agent_speech
+            previous["continuations"] = session["continuations"]
+            previous["gather_seconds"].append(gather_seconds)
+            return
+
+        transcript.append({
+            "role": "agent",
+            "content": agent_speech,
+            "confidence": confidence,
+            "turn": session["current_turn"],
+            "gather_seconds": [gather_seconds],
+        })
+
+    # Decide whether to spend another gather collecting the rest of an answer.
+    # Bounded by MAX_CONTINUATIONS so an agent that never punctuates cannot hold
+    # the call open indefinitely, since extending does not advance current_turn
+    # and so is not covered by MAX_TURNS.
+    def should_extend(self, session, agent_speech):
+        if session["continuations"] >= MAX_CONTINUATIONS:
+            return False
+
+        text = agent_speech.rstrip()
+        return bool(text) and text[-1] not in TERMINAL_PUNCTUATION
 
     # Handle scripted scenarios with optional branching
     def _handle_scripted(self, session):
@@ -88,9 +131,8 @@ class ConversationEngine:
             session["complete"] = True
             return {"action": "hangup"}
 
-        # Get next utterance and apply templates
+        # Get next utterance
         utterance = total_turns[current_turn]["send"]
-        utterance = self.apply_templates(utterance, session["transcript"])
 
         # Log our utterance
         session["transcript"].append({
@@ -101,44 +143,6 @@ class ConversationEngine:
 
         # Track for branch evaluation next round
         session["last_sent_turn"] = current_turn
-        session["current_turn"] = current_turn + 1
-
-        return {"action": "send", "utterance": utterance}
-
-    # Handle adaptive scenarios using LLM-generated utterances
-    def _handle_adaptive(self, session):
-        strategy = session["scenario"]["strategy"]
-        max_turns = strategy.get("max_turns", 6)
-        current_turn = session["current_turn"]
-
-        # Check if we're done
-        if current_turn >= max_turns or current_turn >= MAX_TURNS:
-            session["complete"] = True
-            return {"action": "hangup"}
-
-        # Import here to avoid loading the module when not using adaptive scenarios.
-        # strategist.py is kept out of the public repo for now.
-        try:
-            from strategist import generate_utterance
-        except ImportError:
-            raise RuntimeError(
-                "This scenario uses adaptive strategy generation, which requires "
-                "strategist.py (not included in this build)."
-            )
-
-        utterance = generate_utterance(
-            strategy=strategy,
-            transcript=session["transcript"],
-            turn_number=current_turn,
-        )
-
-        # Log our utterance
-        session["transcript"].append({
-            "role": "user",
-            "content": utterance,
-            "turn": current_turn,
-        })
-
         session["current_turn"] = current_turn + 1
 
         return {"action": "send", "utterance": utterance}
@@ -189,24 +193,15 @@ class ConversationEngine:
             return False
         return session["complete"]
 
+    # Seconds since the last webhook for this call, or None if there is no session.
+    # Used to tell a slow call apart from a dead one.
+    def seconds_since_activity(self, call_sid):
+        session = self.sessions.get(call_sid)
+        if not session:
+            return None
+        return time.time() - session["last_activity"]
+
     # Remove call session using a given call_sid
     def remove_session(self, call_sid):
         return self.sessions.pop(call_sid, None)
 
-    # Sets the last response in a variable that can be used if
-    # the {{last_response}} tag exists in the scenario YAML
-    def apply_templates(self, message, transcript):
-        # {{last_response}} - most recent agent response
-        last_response = ""
-        for entry in reversed(transcript):
-            if entry["role"] == "agent":
-                last_response = entry["content"]
-                break
-
-        message = message.replace("{{last_response}}", last_response)
-
-        # {{turn_count}} - number of user turns so far
-        turn_count = sum(1 for t in transcript if t["role"] == "user")
-        message = message.replace("{{turn_count}}", str(turn_count))
-
-        return message

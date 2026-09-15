@@ -83,7 +83,6 @@ def build_twiml(result):
             speech_timeout=SPEECH_TIMEOUT,
             speech_model=SPEECH_MODEL,
             language=SPEECH_LANGUAGE,
-            enhanced="true"
         )
         gather.say(result["utterance"])
         response.append(gather)

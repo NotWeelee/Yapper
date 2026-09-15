@@ -38,7 +38,8 @@ class Reporter:
             print("  " + "-" * 56)
             for r in self.findings:
                 severity = r["severity"].upper()
-                print(f"  [{severity}] {r['scenario']}")
+                partial = "" if r.get("completed", True) else "  (partial transcript)"
+                print(f"  [{severity}] {r['scenario']}{partial}")
                 print(f"    OWASP: {r['owasp_id']}")
                 print(f"    {r['description']}")
 
@@ -69,7 +70,8 @@ class Reporter:
             print("  PASSED:")
             print("  " + "-" * 56)
             for r in self.passed:
-                print(f"  {r['scenario']}")
+                partial = "" if r.get("completed", True) else "  (partial transcript)"
+                print(f"  {r['scenario']}{partial}")
             print()
 
         print("=" * 60)
