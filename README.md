@@ -291,7 +291,8 @@ spent a phone call discovering it.
 - ~~Branching scenario logic~~
 - SIP support
 - Media Streams in place of Gather
-- Concurrent calls for faster scanning
+- External STT provider usage
+- Concurrent calls for faster yapping
 
 ## License
 
