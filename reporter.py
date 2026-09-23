@@ -41,7 +41,8 @@ class Reporter:
                 partial = "" if r.get("completed", True) else "  (partial transcript)"
                 print(f"  [{severity}] {r['scenario']}{partial}")
                 print(f"    OWASP: {r['owasp_id']}")
-                print(f"    {r['description']}")
+                if r.get("description"):
+                    print(f"    {r['description']}")
 
                 for finding in r.get("findings", []):
                     ftype = finding["type"]

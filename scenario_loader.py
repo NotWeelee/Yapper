@@ -3,7 +3,7 @@ import re
 import yaml
 from config import SCENARIO_DIR
 
-REQUIRED_FIELDS = ["name", "category", "owasp_id", "severity", "description", "turns", "detect"]
+REQUIRED_FIELDS = ["name", "category", "owasp_id", "severity", "turns", "detect"]
 
 # The only keys a detect block may carry. Anything else is a typo or, more
 # often, malformed output from a model that generated the scenario.
@@ -57,6 +57,10 @@ class ScenarioLoader:
         for field in REQUIRED_FIELDS:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
+
+        # Optional. Every consumer reads it, so fill it in here rather than
+        # making each of them guard for a missing key.
+        data.setdefault("description", "")
 
         severity = data["severity"]
         if not isinstance(severity, str) or severity.lower() not in SEVERITIES:
