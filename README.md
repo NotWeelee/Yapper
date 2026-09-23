@@ -1,5 +1,5 @@
 # Yapper
-**v0.1.0**
+**v0.2.0**
 
 A security testing tool for voice-based AI agents, with sample scenarios mapped to the OWASP Top 10 for LLM Applications (2025).
 
@@ -56,8 +56,8 @@ ngrok config add-authtoken YOUR_TOKEN_HERE
 ### Clone and set up Yapper
 
 ```bash
-git clone https://github.com/NotWeelee/yapper.git
-cd yapper
+git clone https://github.com/NotWeelee/Yapper.git
+cd Yapper
 uv sync
 ```
 
@@ -78,7 +78,7 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
 
 # Optional (defaults shown)
 WEBHOOK_PORT=5000
-SPEECH_TIMEOUT=5
+SPEECH_TIMEOUT=3
 SPEECH_MODEL=deepgram_nova-3
 SPEECH_LANGUAGE=en-US
 MAX_TURNS=20

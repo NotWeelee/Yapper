@@ -89,7 +89,7 @@ class Reporter:
         return {
             "meta": {
                 "tool": "yapper",
-                "version": "0.1.0",
+                "version": "0.2.0",
                 "timestamp": self.timestamp,
                 "target_number": self.target_number,
             },
